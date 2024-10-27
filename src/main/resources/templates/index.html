@@ -9,27 +9,27 @@
 <body>
     <div class="container">
         <h1>Document Converter</h1>
-        <p>Upload your Word or PDF document to convert between formats.</p>
+
 
         <!-- Word to PDF Section -->
-        <h2>Word to PDF Converter</h2>
+        <h4>Word to PDF Converter</h4>
         <form id="wordToPdfForm" enctype="multipart/form-data">
             <input type="file" id="wordInput" name="file" accept=".docx, .doc" required />
             <button type="submit">Convert to PDF</button>
         </form>
         <div class="result" id="pdfResult" style="display:none;">
-            <p>Your PDF file is ready!</p>
+            <p>Successfully converted!</p>
             <a id="pdfDownloadLink" class="download-link">Download PDF</a>
         </div>
 
         <!-- PDF to Word Section -->
-        <h2>PDF to Word Converter</h2>
+        <h4>PDF to Word Converter</h4>
         <form id="pdfToDocForm" enctype="multipart/form-data">
             <input type="file" id="pdfInput" name="file" accept=".pdf" required />
             <button type="submit">Convert to Word</button>
         </form>
         <div class="result" id="docResult" style="display:none;">
-            <p>Your Word file is ready!</p>
+            <p>Successfully converted!</p>
             <a id="docDownloadLink" class="download-link">Download Word</a>
         </div>
     </div>
