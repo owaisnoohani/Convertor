@@ -47,7 +47,7 @@ public class DocumentController {
     }
 
     // Method to convert Word to PDF
-    private byte[] convertWordToPdf(MultipartFile file) {
+   private byte[] convertWordToPdf(MultipartFile file) {
         try {
             // Load the Word document
             InputStream fileStream = file.getInputStream();
@@ -58,13 +58,26 @@ public class DocumentController {
             PDPage page = new PDPage();
             pdfDocument.addPage(page);
 
-            // Add content to the PDF from the Word document (this is just an example)
+            // Initialize content stream for the page
             PDPageContentStream contentStream = new PDPageContentStream(pdfDocument, page);
-            contentStream.beginText();
             contentStream.setFont(PDType1Font.HELVETICA, 12);
             contentStream.setLeading(14.5f);
+            contentStream.beginText();
             contentStream.newLineAtOffset(25, 750);
-            contentStream.showText("This is an example conversion from Word to PDF.");
+
+            // Loop through each paragraph in the Word document
+            for (XWPFParagraph paragraph : wordDocument.getParagraphs()) {
+                String paragraphText = paragraph.getText().replace("\t", " ");  // Replace tabs with spaces
+
+                // Split the paragraph text by line breaks
+                String[] lines = paragraphText.split("\\r?\\n");
+                for (String line : lines) {
+                    contentStream.showText(line); // Add text to the PDF
+                    contentStream.newLine();      // Move to the next line
+                }
+                contentStream.newLine(); // Add extra space between paragraphs
+            }
+
             contentStream.endText();
             contentStream.close();
 
@@ -72,6 +85,7 @@ public class DocumentController {
             ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
             pdfDocument.save(outputStream);
             pdfDocument.close();
+            wordDocument.close();
 
             return outputStream.toByteArray();
         } catch (Exception e) {
