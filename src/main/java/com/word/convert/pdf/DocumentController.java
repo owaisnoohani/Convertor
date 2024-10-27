@@ -154,20 +154,47 @@ public class DocumentController {
 
 
     // Method to convert PDF to DOC (placeholder example)
-    private byte[] convertPdfToWord(MultipartFile file) {
+       private byte[] convertPdfToWord(MultipartFile file) {
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         try {
             // Load the PDF document
-            InputStream inputStream = file.getInputStream();
-            Document pdfDocument = new Document(inputStream);
+            PDDocument pdfDocument = PDDocument.load(file.getInputStream());
+            PDPageTree pages = pdfDocument.getPages();
 
-            // Convert PDF to DOCX
-            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-            pdfDocument.save(outputStream, SaveFormat.DocX);
+            // Create a Word document
+            XWPFDocument wordDocument = new XWPFDocument();
+
+            // Iterate through each page of the PDF
+            for (PDPage page : pages) {
+                // Extract text from the PDF page
+                PDFTextStripper pdfStripper = new PDFTextStripper();
+                String pageText = pdfStripper.getText(pdfDocument);
+
+                // Add a new paragraph to the Word document
+                XWPFParagraph paragraph = wordDocument.createParagraph();
+                XWPFRun run = paragraph.createRun();
+                run.setText(pageText);
+                run.addBreak(); // Add a break after the text
+
+                // You can add additional formatting here if needed
+            }
+
+            // Save the Word document to the output stream
+            wordDocument.write(outputStream);
+            wordDocument.close();
+            pdfDocument.close();
 
             return outputStream.toByteArray();
         } catch (Exception e) {
+            System.err.println("Error during PDF to DOCX conversion: " + e.getMessage());
             e.printStackTrace();
             return new byte[0]; // Return an empty byte array in case of error
+        } finally {
+            try {
+                outputStream.close(); // Ensure the output stream is closed
+            } catch (IOException e) {
+                System.err.println("Error closing output stream: " + e.getMessage());
+            }
         }
     }
 }
