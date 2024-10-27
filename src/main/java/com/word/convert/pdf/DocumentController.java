@@ -3,10 +3,12 @@ package com.word.convert.pdf;
 
 
 
-import java.io.ByteArrayOutputStream;
+import java.io.*;
+
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
+import org.apache.pdfbox.pdmodel.PDPageTree;
 import org.apache.pdfbox.pdmodel.font.PDType1Font;
 import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
 import org.apache.pdfbox.text.PDFTextStripper;
@@ -20,7 +22,6 @@ import com.aspose.pdf.SaveFormat;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.ByteArrayOutputStream;
-import java.io.InputStream;
 import java.io.InputStream;
 
 @RestController
@@ -154,7 +155,7 @@ public class DocumentController {
 
 
     // Method to convert PDF to DOC (placeholder example)
-       private byte[] convertPdfToWord(MultipartFile file) {
+    private byte[] convertPdfToWord(MultipartFile file) {
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         try {
             // Load the PDF document
@@ -197,4 +198,8 @@ public class DocumentController {
             }
         }
     }
+
+
+
+
 }
