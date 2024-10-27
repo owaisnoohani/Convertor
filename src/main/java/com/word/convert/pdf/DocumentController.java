@@ -8,9 +8,9 @@ import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
 import org.apache.pdfbox.pdmodel.font.PDType1Font;
+import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
 import org.apache.pdfbox.text.PDFTextStripper;
-import org.apache.poi.xwpf.usermodel.XWPFDocument;
-import org.apache.poi.xwpf.usermodel.XWPFParagraph;
+import org.apache.poi.xwpf.usermodel.*;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -47,7 +47,9 @@ public class DocumentController {
     }
 
     // Method to convert Word to PDF
-   private byte[] convertWordToPdf(MultipartFile file) {
+
+
+    private byte[] convertWordToPdf(MultipartFile file) {
         try {
             // Load the Word document
             InputStream fileStream = file.getInputStream();
@@ -58,24 +60,79 @@ public class DocumentController {
             PDPage page = new PDPage();
             pdfDocument.addPage(page);
 
-            // Initialize content stream for the page
+            // Set up content stream and initial position
             PDPageContentStream contentStream = new PDPageContentStream(pdfDocument, page);
-            contentStream.setFont(PDType1Font.HELVETICA, 12);
+            PDType1Font font = PDType1Font.HELVETICA; // Store the font
+            float fontSize = 10; // Store the font size
+            contentStream.setFont(font, fontSize);
             contentStream.setLeading(14.5f);
             contentStream.beginText();
-            contentStream.newLineAtOffset(25, 750);
+            contentStream.newLineAtOffset(50, 750);
 
-            // Loop through each paragraph in the Word document
+            // Track current Y position, margin, and max width
+            float yPosition = 750;
+            final float margin = 50;
+            final float contentWidth = page.getMediaBox().getWidth() - 2 * margin;
+            final float lineHeight = 14.5f;
+
             for (XWPFParagraph paragraph : wordDocument.getParagraphs()) {
-                String paragraphText = paragraph.getText().replace("\t", " ");  // Replace tabs with spaces
+                for (XWPFRun run : paragraph.getRuns()) {
+                    String text = run.text().replace("\t", " ");
 
-                // Split the paragraph text by line breaks
-                String[] lines = paragraphText.split("\\r?\\n");
-                for (String line : lines) {
-                    contentStream.showText(line); // Add text to the PDF
-                    contentStream.newLine();      // Move to the next line
+                    // Split text for line-by-line processing and word wrapping
+                    String[] lines = text.split("\n");
+                    for (String line : lines) {
+                        String[] words = line.split(" ");
+                        StringBuilder currentLine = new StringBuilder();
+
+                        for (String word : words) {
+                            // Calculate text width using stored font and size
+                            float textWidth = font.getStringWidth(currentLine + " " + word) / 1000 * fontSize;
+                            if (textWidth > contentWidth) {
+                                contentStream.showText(currentLine.toString());
+                                contentStream.newLine();
+                                yPosition -= lineHeight;
+
+                                // Add a new page if the content overflows
+                                if (yPosition < margin) {
+                                    contentStream.endText();
+                                    contentStream.close();
+                                    page = new PDPage();
+                                    pdfDocument.addPage(page);
+                                    contentStream = new PDPageContentStream(pdfDocument, page);
+                                    contentStream.setFont(font, fontSize);
+                                    contentStream.setLeading(lineHeight);
+                                    contentStream.beginText();
+                                    contentStream.newLineAtOffset(margin, 750);
+                                    yPosition = 750;
+                                }
+
+                                currentLine = new StringBuilder(word);
+                            } else {
+                                currentLine.append(" ").append(word);
+                            }
+                        }
+
+                        // Write remaining text in the current line
+                        contentStream.showText(currentLine.toString());
+                        contentStream.newLine();
+                        yPosition -= lineHeight;
+                    }
+
+                    // Handle images in the run
+                    for (XWPFPicture picture : run.getEmbeddedPictures()) {
+                        PDImageXObject image = PDImageXObject.createFromByteArray(
+                                pdfDocument, picture.getPictureData().getData(), picture.getPictureData().getFileName());
+
+                        contentStream.endText(); // Temporarily end text mode
+                        contentStream.drawImage(image, margin, yPosition - 100, 100, 100);
+                        contentStream.beginText();
+                        contentStream.newLineAtOffset(margin, yPosition - 120);
+                        yPosition -= 120;  // Space adjustment for the image
+                    }
                 }
-                contentStream.newLine(); // Add extra space between paragraphs
+                contentStream.newLine(); // Space between paragraphs
+                yPosition -= lineHeight;
             }
 
             contentStream.endText();
@@ -90,9 +147,11 @@ public class DocumentController {
             return outputStream.toByteArray();
         } catch (Exception e) {
             e.printStackTrace();
-            return new byte[0]; // Return an empty byte array in case of error
+            return new byte[0];
         }
     }
+
+
 
     // Method to convert PDF to DOC (placeholder example)
     private byte[] convertPdfToWord(MultipartFile file) {
