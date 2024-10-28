@@ -173,49 +173,63 @@ public class DocumentController {
     }
 
     // Method to convert PDF to DOC (placeholder example)
-    private byte[] convertPdfToWord(MultipartFile file) {
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        try {
-            // Load the PDF document
-            PDDocument pdfDocument = PDDocument.load(file.getInputStream());
-            PDPageTree pages = pdfDocument.getPages();
+     private byte[] convertPdfToWord(MultipartFile file) {
+    	    ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+    	    try {
+    	        // Load the PDF document
+    	        PDDocument pdfDocument = PDDocument.load(file.getInputStream());
+    	        PDFTextStripper pdfStripper = new PDFTextStripper();
 
-            // Create a Word document
-            XWPFDocument wordDocument = new XWPFDocument();
+    	        // Extract text while keeping track of page structure
+    	        pdfStripper.setSortByPosition(true); // Preserve word positions
+    	        pdfStripper.setStartPage(1); // Extract from first page to the last
+    	        pdfStripper.setEndPage(pdfDocument.getNumberOfPages());
 
-            // Iterate through each page of the PDF
-            for (PDPage page : pages) {
-                // Extract text from the PDF page
-                PDFTextStripper pdfStripper = new PDFTextStripper();
-                String pageText = pdfStripper.getText(pdfDocument);
+    	        String pdfText = pdfStripper.getText(pdfDocument);
+    	        XWPFDocument wordDocument = new XWPFDocument();
 
-                // Add a new paragraph to the Word document
-                XWPFParagraph paragraph = wordDocument.createParagraph();
-                XWPFRun run = paragraph.createRun();
-                run.setText(pageText);
-                run.addBreak(); // Add a break after the text
+    	        // Handle page breaks
+    	        String[] pages = pdfText.split("\\f");  // Split text into pages using form feed
 
-                // You can add additional formatting here if needed
-            }
+    	        for (String page : pages) {
+    	            String[] lines = page.split("\\r?\\n"); // Split text into lines
 
-            // Save the Word document to the output stream
-            wordDocument.write(outputStream);
-            wordDocument.close();
-            pdfDocument.close();
+    	            for (String line : lines) {
+    	                if (!line.trim().isEmpty()) {
+    	                    // Create a paragraph for each line of text
+    	                    XWPFParagraph paragraph = wordDocument.createParagraph();
+    	                    XWPFRun run = paragraph.createRun();
+    	                    run.setText(line.trim());
 
-            return outputStream.toByteArray();
-        } catch (Exception e) {
-            System.err.println("Error during PDF to DOCX conversion: " + e.getMessage());
-            e.printStackTrace();
-            return new byte[0]; // Return an empty byte array in case of error
-        } finally {
-            try {
-                outputStream.close(); // Ensure the output stream is closed
-            } catch (IOException e) {
-                System.err.println("Error closing output stream: " + e.getMessage());
-            }
-        }
-    }
+    	                    // Set appropriate spacing
+    	                    paragraph.setSpacingAfter(150); // Adjust for line spacing between paragraphs
+    	                }
+    	            }
+
+    	            // Add page break after each page
+    	            XWPFParagraph pageBreakParagraph = wordDocument.createParagraph();
+    	            pageBreakParagraph.setPageBreak(true);  // Insert a page break
+    	        }
+
+    	        // Save the Word document to the output stream
+    	        wordDocument.write(outputStream);
+    	        wordDocument.close();
+    	        pdfDocument.close();
+
+    	        return outputStream.toByteArray();
+    	    } catch (Exception e) {
+    	        System.err.println("Error during PDF to DOCX conversion: " + e.getMessage());
+    	        e.printStackTrace();
+    	        return new byte[0]; // Return an empty byte array in case of error
+    	    } finally {
+    	        try {
+    	            outputStream.close(); // Ensure the output stream is closed
+    	        } catch (IOException e) {
+    	            System.err.println("Error closing output stream: " + e.getMessage());
+    	        }
+    	    }
+    	}
+
 
 
 
