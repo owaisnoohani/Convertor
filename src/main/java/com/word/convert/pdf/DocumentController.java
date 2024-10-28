@@ -29,13 +29,30 @@ import java.io.InputStream;
 public class DocumentController {
 
     //  Word to PDF conversion
-    @PostMapping("/convert-to-pdf")
-    public ResponseEntity<byte[]> convertToPdf(@RequestParam("file") MultipartFile file) {
-        byte[] pdfContent = convertWordToPdf(file);
-        return ResponseEntity.ok()
-            .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=converted.pdf")
-            .body(pdfContent);
-    }
+   @PostMapping("/convert-to-pdf")
+	public ResponseEntity<byte[]> convertToPdf(@RequestParam("file") MultipartFile file) {
+	    byte[] pdfContent = convertWordToPdf(file);
+	    
+	    // Get the original file name and change the extension to .pdf
+	    String originalFileName = file.getOriginalFilename();
+	    String pdfFileName = "converted.pdf"; // Default file name in case original is null
+
+	    if (originalFileName != null) {
+	        int dotIndex = originalFileName.lastIndexOf(".");
+	        if (dotIndex > 0) {
+	            pdfFileName = originalFileName.substring(0, dotIndex) + ".pdf"; // Replace extension with .pdf
+	        } else {
+	            pdfFileName = originalFileName + ".pdf"; // Append .pdf if there is no extension
+	        }
+	    }
+	    
+	   
+	    return ResponseEntity.ok()
+	        .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + pdfFileName + "\"")
+	        .contentType(MediaType.APPLICATION_PDF) // Specify the content type
+	        .body(pdfContent);
+	}
+
 
     
     // PDF to DOC conversion
