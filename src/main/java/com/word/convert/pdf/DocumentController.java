@@ -52,13 +52,16 @@ public class DocumentController {
 	        .body(pdfContent);
 	}
     // PDF to DOC conversion
-    @PostMapping("/convert-to-doc")
-    public ResponseEntity<byte[]> convertToDoc(@RequestParam("file") MultipartFile file) {
-        byte[] docContent = convertPdfToWord(file);
-        return ResponseEntity.ok()
-            .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=converted.docx")
-            .body(docContent);
-    }
+   @PostMapping("/convert-to-doc")
+	public ResponseEntity<byte[]> convertToDoc(@RequestParam("file") MultipartFile file) {
+	    byte[] docContent = convertPdfToWord(file);
+	    String originalFilename = file.getOriginalFilename();
+	    String downloadFilename = originalFilename != null ? originalFilename.replace(".pdf", ".docx") : "converted.docx";
+
+	    return ResponseEntity.ok()
+	        .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + downloadFilename + "\"")
+	        .body(docContent);
+	}
 
     // Method to convert Word to PDF
 
