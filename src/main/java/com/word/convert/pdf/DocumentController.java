@@ -29,7 +29,7 @@ import java.io.InputStream;
 public class DocumentController {
 
     //  Word to PDF conversion
-   @PostMapping("/convert-to-pdf")
+  @PostMapping("/convert-to-pdf")
 	public ResponseEntity<byte[]> convertToPdf(@RequestParam("file") MultipartFile file) {
 	    byte[] pdfContent = convertWordToPdf(file);
 	    
@@ -52,8 +52,6 @@ public class DocumentController {
 	        .contentType(MediaType.APPLICATION_PDF) // Specify the content type
 	        .body(pdfContent);
 	}
-
-
     
     // PDF to DOC conversion
     @PostMapping("/convert-to-doc")
