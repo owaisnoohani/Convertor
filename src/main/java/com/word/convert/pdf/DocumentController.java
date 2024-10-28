@@ -50,7 +50,7 @@ public class DocumentController {
     // Method to convert Word to PDF
 
 
-    private byte[] convertWordToPdf(MultipartFile file) {
+     private byte[] convertWordToPdf(MultipartFile file) {
         try {
             // Load the Word document
             InputStream fileStream = file.getInputStream();
@@ -61,82 +61,82 @@ public class DocumentController {
             PDPage page = new PDPage();
             pdfDocument.addPage(page);
 
-            // Set up content stream and initial position
+            // Set up content stream
             PDPageContentStream contentStream = new PDPageContentStream(pdfDocument, page);
-            PDType1Font font = PDType1Font.HELVETICA; // Store the font
-            float fontSize = 10; // Store the font size
-            contentStream.setFont(font, fontSize);
-            contentStream.setLeading(14.5f);
-            contentStream.beginText();
-            contentStream.newLineAtOffset(50, 750);
-
-            // Track current Y position, margin, and max width
-            float yPosition = 750;
-            final float margin = 50;
-            final float contentWidth = page.getMediaBox().getWidth() - 2 * margin;
-            final float lineHeight = 14.5f;
+            float margin = 50;
+            float yPosition = page.getMediaBox().getHeight() - margin;
+            float lineHeight = 12; // Adjust line height as needed
 
             for (XWPFParagraph paragraph : wordDocument.getParagraphs()) {
-                for (XWPFRun run : paragraph.getRuns()) {
-                    String text = run.text().replace("\t", " ");
-
-                    // Split text for line-by-line processing and word wrapping
-                    String[] lines = text.split("\n");
-                    for (String line : lines) {
-                        String[] words = line.split(" ");
-                        StringBuilder currentLine = new StringBuilder();
-
-                        for (String word : words) {
-                            // Calculate text width using stored font and size
-                            float textWidth = font.getStringWidth(currentLine + " " + word) / 1000 * fontSize;
-                            if (textWidth > contentWidth) {
-                                contentStream.showText(currentLine.toString());
-                                contentStream.newLine();
-                                yPosition -= lineHeight;
-
-                                // Add a new page if the content overflows
-                                if (yPosition < margin) {
-                                    contentStream.endText();
-                                    contentStream.close();
-                                    page = new PDPage();
-                                    pdfDocument.addPage(page);
-                                    contentStream = new PDPageContentStream(pdfDocument, page);
-                                    contentStream.setFont(font, fontSize);
-                                    contentStream.setLeading(lineHeight);
-                                    contentStream.beginText();
-                                    contentStream.newLineAtOffset(margin, 750);
-                                    yPosition = 750;
-                                }
-
-                                currentLine = new StringBuilder(word);
-                            } else {
-                                currentLine.append(" ").append(word);
-                            }
+                // Set font size and style based on the Word paragraph
+                float fontSize = 10; // Default font size; adjust if needed
+                PDType1Font font = PDType1Font.HELVETICA; // Default font; adjust if needed
+                
+                // Retrieve font size from the Word document if specified
+                if (paragraph.getRuns().size() > 0) {
+                    for (XWPFRun run : paragraph.getRuns()) {
+                        if (run.getFontSize() != -1) {
+                            fontSize = run.getFontSize();
                         }
+                        // You can add additional logic to handle different font styles here
+                    }
+                }
 
-                        // Write remaining text in the current line
+                contentStream.setFont(font, fontSize);
+                contentStream.setLeading(fontSize + 2); // Set leading to be slightly more than the font size
+
+                contentStream.beginText();
+                contentStream.newLineAtOffset(margin, yPosition);
+
+                // Process each paragraph as a single entity to maintain sequence
+                String paragraphText = paragraph.getText(); // Get the entire paragraph text
+                
+                // Handle potential word wrap and keep line sequences intact
+                String[] lines = paragraphText.split("\n"); // Split by new line
+                for (String line : lines) {
+                    String[] words = line.split(" "); // Split by space for word wrapping
+                    StringBuilder currentLine = new StringBuilder();
+
+                    for (String word : words) {
+                        String newLine = currentLine.length() == 0 ? word : currentLine + " " + word;
+                        float textWidth = font.getStringWidth(newLine) / 1000 * fontSize;
+
+                        // Check if the current line width exceeds page width
+                        if (textWidth > (page.getMediaBox().getWidth() - 2 * margin)) {
+                            contentStream.showText(currentLine.toString());
+                            contentStream.newLine();
+                            yPosition -= lineHeight;
+
+                            // Check for page overflow
+                            if (yPosition < margin) {
+                                contentStream.endText();
+                                contentStream.close();
+                                page = new PDPage();
+                                pdfDocument.addPage(page);
+                                contentStream = new PDPageContentStream(pdfDocument, page);
+                                contentStream.setFont(font, fontSize);
+                                contentStream.setLeading(fontSize + 2);
+                                contentStream.beginText();
+                                contentStream.newLineAtOffset(margin, page.getMediaBox().getHeight() - margin);
+                                yPosition = page.getMediaBox().getHeight() - margin;
+                            }
+                            currentLine = new StringBuilder(word); // Start new line with the current word
+                        } else {
+                            currentLine.append(currentLine.length() == 0 ? "" : " ").append(word);
+                        }
+                    }
+
+                    // Write any remaining text in current line
+                    if (currentLine.length() > 0) {
                         contentStream.showText(currentLine.toString());
                         contentStream.newLine();
                         yPosition -= lineHeight;
                     }
-
-                    // Handle images in the run
-                    for (XWPFPicture picture : run.getEmbeddedPictures()) {
-                        PDImageXObject image = PDImageXObject.createFromByteArray(
-                                pdfDocument, picture.getPictureData().getData(), picture.getPictureData().getFileName());
-
-                        contentStream.endText(); // Temporarily end text mode
-                        contentStream.drawImage(image, margin, yPosition - 100, 100, 100);
-                        contentStream.beginText();
-                        contentStream.newLineAtOffset(margin, yPosition - 120);
-                        yPosition -= 120;  // Space adjustment for the image
-                    }
                 }
-                contentStream.newLine(); // Space between paragraphs
-                yPosition -= lineHeight;
+                contentStream.endText();
+                yPosition -= lineHeight; // Add space after each paragraph
             }
 
-            contentStream.endText();
             contentStream.close();
 
             // Convert PDF to byte array
