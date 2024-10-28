@@ -9,31 +9,106 @@
 <body>
     <div class="container">
         <h1>Document Converter</h1>
-
+        <p>Upload your Word or PDF document to convert between formats.</p>
 
         <!-- Word to PDF Section -->
-        <h4>Word to PDF Converter</h4>
+        <h2>Word to PDF Converter</h2>
         <form id="wordToPdfForm" enctype="multipart/form-data">
             <input type="file" id="wordInput" name="file" accept=".docx, .doc" required />
             <button type="submit">Convert to PDF</button>
         </form>
         <div class="result" id="pdfResult" style="display:none;">
-            <p>Successfully converted!</p>
+            <p>Your PDF file is ready!</p>
             <a id="pdfDownloadLink" class="download-link">Download PDF</a>
         </div>
 
         <!-- PDF to Word Section -->
-        <h4>PDF to Word Converter</h4>
+        <h2>PDF to Word Converter</h2>
         <form id="pdfToDocForm" enctype="multipart/form-data">
             <input type="file" id="pdfInput" name="file" accept=".pdf" required />
             <button type="submit">Convert to Word</button>
         </form>
         <div class="result" id="docResult" style="display:none;">
-            <p>Successfully converted!</p>
+            <p>Your Word file is ready!</p>
             <a id="docDownloadLink" class="download-link">Download Word</a>
         </div>
     </div>
 
-    <script src="/js/script.js"></script>
+    <script>	// Word to PDF conversion
+
+	document.getElementById("wordToPdfForm").addEventListener("submit", function(event) {
+	    event.preventDefault();
+	    const wordInput = document.getElementById("wordInput");
+	    const formData = new FormData();
+	    formData.append("file", wordInput.files[0]);
+
+	    fetch('/api/document/convert-to-pdf', {
+	        method: 'POST',
+	        body: formData
+	    })
+	    .then(response => {
+	        // Get the original filename from the Content-Disposition header
+	        const disposition = response.headers.get('Content-Disposition');
+	        let pdfFileName = 'converted.pdf'; // Default filename
+	        
+	        if (disposition && disposition.includes('filename=')) {
+	            const filenameMatch = disposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+	            if (filenameMatch != null && filenameMatch[1]) {
+	                pdfFileName = filenameMatch[1].replace(/['"]/g, ''); // Remove quotes if present
+	            }
+				console.log("1----");
+				console.log(pdfFileName);
+	        }
+			console.log(pdfFileName);
+	        return response.blob().then(blob => ({
+	            blob: blob,
+	            pdfFileName: pdfFileName
+	        }));
+	    })
+	    .then(({ blob, pdfFileName }) => {
+	        const downloadLink = document.getElementById("pdfDownloadLink");
+	        const pdfResult = document.getElementById("pdfResult");
+
+	        const url = window.URL.createObjectURL(blob);
+	        downloadLink.href = url;
+	        downloadLink.download = pdfFileName; // Use the original filename
+
+	        pdfResult.style.display = "block";
+	        downloadLink.style.display = "inline";
+	    })
+	    .catch(error => {
+	        console.error('Error:', error);
+	    });
+	});
+
+
+	// PDF to Word conversion
+	document.getElementById("pdfToDocForm").addEventListener("submit", function(event) {
+	    event.preventDefault();
+	    const pdfInput = document.getElementById("pdfInput");
+	    const formData = new FormData();
+	    formData.append("file", pdfInput.files[0]);
+
+	    fetch('/api/document/convert-to-doc', {
+	        method: 'POST',
+	        body: formData
+	    })
+	    .then(response => response.blob())
+	    .then(blob => {
+	        const downloadLink = document.getElementById("docDownloadLink");
+	        const docResult = document.getElementById("docResult");
+
+	        const url = window.URL.createObjectURL(blob);
+	        downloadLink.href = url;
+	        downloadLink.download = 'converted.docx';
+
+	        docResult.style.display = "block";
+	        downloadLink.style.display = "inline";
+	    })
+	    .catch(error => {
+	        console.error('Error:', error);
+	    });
+	});
+</script>
 </body>
 </html>
