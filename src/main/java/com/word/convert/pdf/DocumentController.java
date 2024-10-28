@@ -20,6 +20,7 @@ import org.springframework.web.multipart.MultipartFile;
 import com.aspose.pdf.Document;
 import com.aspose.pdf.SaveFormat;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.http.MediaType;
 
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
