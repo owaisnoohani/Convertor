@@ -63,13 +63,15 @@ public class DocumentController {
 
 
      private byte[] convertWordToPdf(MultipartFile file) {
+        PDDocument pdfDocument = null;
+        ByteArrayOutputStream outputStream = null;
         try {
             // Load the Word document
             InputStream fileStream = file.getInputStream();
             XWPFDocument wordDocument = new XWPFDocument(fileStream);
 
             // Create a PDF document
-            PDDocument pdfDocument = new PDDocument();
+            pdfDocument = new PDDocument();
             PDPage page = new PDPage();
             pdfDocument.addPage(page);
 
@@ -90,23 +92,17 @@ public class DocumentController {
                         if (run.getFontSize() != -1) {
                             fontSize = run.getFontSize();
                         }
-                        // You can add additional logic to handle different font styles here
                     }
                 }
 
                 contentStream.setFont(font, fontSize);
                 contentStream.setLeading(fontSize + 2); // Set leading to be slightly more than the font size
 
-                contentStream.beginText();
-                contentStream.newLineAtOffset(margin, yPosition);
-
                 // Process each paragraph as a single entity to maintain sequence
-                String paragraphText = paragraph.getText(); // Get the entire paragraph text
-                
-                // Handle potential word wrap and keep line sequences intact
+                String paragraphText = paragraph.getText();
                 String[] lines = paragraphText.split("\n"); // Split by new line
                 for (String line : lines) {
-                    String[] words = line.split(" "); // Split by space for word wrapping
+                    String[] words = line.split(" ");
                     StringBuilder currentLine = new StringBuilder();
 
                     for (String word : words) {
@@ -115,22 +111,21 @@ public class DocumentController {
 
                         // Check if the current line width exceeds page width
                         if (textWidth > (page.getMediaBox().getWidth() - 2 * margin)) {
+                            contentStream.beginText();
+                            contentStream.newLineAtOffset(margin, yPosition);
                             contentStream.showText(currentLine.toString());
-                            contentStream.newLine();
+                            contentStream.endText();
                             yPosition -= lineHeight;
 
                             // Check for page overflow
                             if (yPosition < margin) {
-                                contentStream.endText();
-                                contentStream.close();
-                                page = new PDPage();
+                                contentStream.close(); // Close current content stream
+                                page = new PDPage(); // Create a new page
                                 pdfDocument.addPage(page);
-                                contentStream = new PDPageContentStream(pdfDocument, page);
+                                contentStream = new PDPageContentStream(pdfDocument, page); // Create a new content stream
                                 contentStream.setFont(font, fontSize);
                                 contentStream.setLeading(fontSize + 2);
-                                contentStream.beginText();
-                                contentStream.newLineAtOffset(margin, page.getMediaBox().getHeight() - margin);
-                                yPosition = page.getMediaBox().getHeight() - margin;
+                                yPosition = page.getMediaBox().getHeight() - margin; // Reset y position for new page
                             }
                             currentLine = new StringBuilder(word); // Start new line with the current word
                         } else {
@@ -140,31 +135,38 @@ public class DocumentController {
 
                     // Write any remaining text in current line
                     if (currentLine.length() > 0) {
+                        contentStream.beginText();
+                        contentStream.newLineAtOffset(margin, yPosition);
                         contentStream.showText(currentLine.toString());
-                        contentStream.newLine();
+                        contentStream.endText();
                         yPosition -= lineHeight;
                     }
                 }
-                contentStream.endText();
                 yPosition -= lineHeight; // Add space after each paragraph
             }
 
             contentStream.close();
 
             // Convert PDF to byte array
-            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+            outputStream = new ByteArrayOutputStream();
             pdfDocument.save(outputStream);
-            pdfDocument.close();
-            wordDocument.close();
-
             return outputStream.toByteArray();
         } catch (Exception e) {
             e.printStackTrace();
             return new byte[0];
+        } finally {
+            try {
+                if (pdfDocument != null) {
+                    pdfDocument.close(); // Ensure the document is closed
+                }
+                if (outputStream != null) {
+                    outputStream.close(); // Ensure the output stream is closed
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
-
-
 
     // Method to convert PDF to DOC (placeholder example)
     private byte[] convertPdfToWord(MultipartFile file) {
