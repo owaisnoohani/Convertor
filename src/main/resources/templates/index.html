@@ -83,6 +83,7 @@
 
 
 	// PDF to Word conversion
+	// PDF to Word conversion
 	document.getElementById("pdfToDocForm").addEventListener("submit", function(event) {
 	    event.preventDefault();
 	    const pdfInput = document.getElementById("pdfInput");
@@ -93,14 +94,32 @@
 	        method: 'POST',
 	        body: formData
 	    })
-	    .then(response => response.blob())
-	    .then(blob => {
+	    .then(response => {
+	        // Get the original filename from the Content-Disposition header
+	        const disposition = response.headers.get('Content-Disposition');
+	        let docFileName = 'converted.docx'; // Default filename
+	        
+	        if (disposition && disposition.includes('filename=')) {
+	            const filenameMatch = disposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+	            if (filenameMatch != null && filenameMatch[1]) {
+	                docFileName = filenameMatch[1].replace(/['"]/g, ''); // Remove quotes if present
+	            }
+	            console.log("1----");
+	            console.log(docFileName);
+	        }
+	        console.log(docFileName);
+	        return response.blob().then(blob => ({
+	            blob: blob,
+	            docFileName: docFileName
+	        }));
+	    })
+	    .then(({ blob, docFileName }) => {
 	        const downloadLink = document.getElementById("docDownloadLink");
 	        const docResult = document.getElementById("docResult");
 
 	        const url = window.URL.createObjectURL(blob);
 	        downloadLink.href = url;
-	        downloadLink.download = 'converted.docx';
+	        downloadLink.download = docFileName; // Use the original filename
 
 	        docResult.style.display = "block";
 	        downloadLink.style.display = "inline";
@@ -109,6 +128,7 @@
 	        console.error('Error:', error);
 	    });
 	});
+
 </script>
 </body>
 </html>
